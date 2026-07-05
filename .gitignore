@@ -1,0 +1,12 @@
+# Tooling
+.codegraph/
+.ruff_cache/
+
+# Session state
+.omo/run-continuation/
+
+# IDE
+.idea/
+
+# OS
+.DS_Store

@@ -1,0 +1,26 @@
+[project]
+name = "personal-finance"
+version = "0.1.0"
+description = "Personal finance API"
+requires-python = ">=3.13"
+dependencies = [
+    "django>=6.0",
+    "djangorestframework>=3.14,<4.0",
+    "djangorestframework-simplejwt>=5.3,<6.0",
+    "django-cors-headers>=4.3,<5.0",
+    "Pillow>=12.0",
+    "dotenv>=0.9.9",
+    "python-decouple>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "drf-spectacular>=0.29.0",
+    "django-stubs>=5.0",
+    "djangorestframework-stubs>=3.14",
+]
+
+[tool.pyright]
+# Django 模型大量使用元类动态注入的方法（get_FOO_display() 等），
+# 静态分析器无法识别这些运行时生成的方法，关闭对应误报。
+reportAttributeAccessIssue = false
