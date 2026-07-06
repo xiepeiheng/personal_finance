@@ -12,6 +12,41 @@ export interface Ledger {
   updated_at: string
 }
 
+export type AccountType = 'bank' | 'securities' | 'cash' | 'credit' | 'alipay'
+
+export interface AccountTypeItem {
+  id: number
+  name: string
+  slug: string
+  sort_order: number
+}
+
+export interface Account {
+  id: number
+  account_type: number
+  account_type_name: string
+  account_type_slug: string
+  name: string
+  initial_balance: string
+  current_balance: string
+  remarks: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Transfer {
+  id: number
+  from_account: number
+  from_account_name: string
+  to_account: number
+  to_account_name: string
+  amount: string
+  trade_time: string
+  note: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Category {
   id: number
   name: string
@@ -31,6 +66,8 @@ export interface Category {
 export interface Transaction {
   id: number
   category: number
+  account: number | null
+  account_name: string | null
   trade_time: string
   partner: string
   amount: string
@@ -83,6 +120,7 @@ export interface Summary {
 
 export interface BatchCreateItem {
   category: number
+  account?: number | null
   trade_time: string
   partner: string
   amount: string
@@ -103,12 +141,24 @@ export interface BatchError {
   success: false
   errors: Record<string, string[]>
 }
-  category: number
-  trade_time: string
-  partner: string
-  amount: string
-  star?: number
-  channel?: string
-  detail?: string
+
+export interface AccountCreate {
+  account_type: number
+  name: string
+  initial_balance?: string
   remarks?: string
+}
+
+export interface AccountTypeCreate {
+  name: string
+  slug: string
+  sort_order: number
+}
+
+export interface TransferCreate {
+  from_account: number
+  to_account: number
+  amount: string
+  trade_time: string
+  note?: string
 }

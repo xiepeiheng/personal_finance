@@ -36,6 +36,21 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/pages/finance/Transactions.vue'),
       },
       {
+        path: 'accounts',
+        name: 'accounts',
+        component: () => import('@/pages/finance/Accounts.vue'),
+      },
+      {
+        path: 'account-types',
+        name: 'account-types',
+        component: () => import('@/pages/finance/AccountTypes.vue'),
+      },
+      {
+        path: 'transfers',
+        name: 'transfers',
+        component: () => import('@/pages/finance/Transfers.vue'),
+      },
+      {
         path: 'settings',
         name: 'settings',
         component: () => import('@/pages/Settings.vue'),

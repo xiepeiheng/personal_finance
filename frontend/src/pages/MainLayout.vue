@@ -48,6 +48,9 @@ import {
   WalletOutline,
   GridOutline,
   ReceiptOutline,
+  CardOutline,
+  SwapHorizontalOutline,
+  LayersOutline,
   SettingsOutline,
   PersonOutline,
   PeopleOutline,
@@ -85,6 +88,9 @@ const menuOptions = computed(() => {
       { label: '账本', key: 'ledgers', icon: renderIcon(WalletOutline) },
       { label: '分类', key: 'categories', icon: renderIcon(GridOutline) },
       { label: '交易', key: 'transactions', icon: renderIcon(ReceiptOutline) },
+      { label: '账户', key: 'accounts', icon: renderIcon(CardOutline) },
+      { label: '账户类型', key: 'account-types', icon: renderIcon(LayersOutline) },
+      { label: '转账', key: 'transfers', icon: renderIcon(SwapHorizontalOutline) },
     )
   }
   if (hasAuthAccess.value) {

@@ -25,6 +25,14 @@
             filterable
             style="width: 200px"
           />
+          <n-select
+            v-model:value="filterAccountId"
+            :options="accountFilterOptions"
+            placeholder="选择账户..."
+            clearable
+            filterable
+            style="width: 200px"
+          />
           <n-divider vertical />
           <n-date-picker
             v-model:value="filterDateRange"
@@ -102,6 +110,7 @@
       :show="showModal"
       :categories="categories"
       :ledgers="ledgers"
+      :accounts="accounts"
       :initial-category-id="newCategoryId"
       :initial-date="newDate"
       :edit-transaction="editTransaction"
@@ -157,9 +166,9 @@ import {
   useMessage,
   NPopconfirm,
 } from 'naive-ui'
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction, getCategories, getLedgers, batchCreateTransactions, getSummary } from '@/api/finance'
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction, getCategories, getLedgers, getAccounts, batchCreateTransactions, getSummary } from '@/api/finance'
 import { useAuthStore } from '@/stores/auth'
-import type { Transaction, Category, Ledger, BatchCreateItem } from '@/api/finance/type'
+import type { Transaction, Category, Ledger, Account, BatchCreateItem } from '@/api/finance/type'
 import TransactionForm from '@/components/TransactionForm.vue'
 
 const authStore = useAuthStore()
@@ -171,6 +180,7 @@ const showModal = ref(false)
 const data = ref<Transaction[]>([])
 const categories = ref<Category[]>([])
 const ledgers = ref<Ledger[]>([])
+const accounts = ref<Account[]>([])
 const filterCategoryId = ref<number | null>(null)
 const filterDateRange = ref<[number, number] | null>(null)
 const filterPartner = ref('')
@@ -393,6 +403,7 @@ const submitBatch = async () => {
 }
 
 const filterLedgerId = ref<number | null>(null)
+const filterAccountId = ref<number | null>(null)
 
 const pagState = reactive({
   page: 1,
@@ -404,6 +415,13 @@ const ledgerFilterOptions = computed(() =>
   ledgers.value.map((l) => ({
     label: `${l.name}（${l.ledger_type_display}）余额：${l.balance}`,
     value: l.id,
+  }))
+)
+
+const accountFilterOptions = computed(() =>
+  accounts.value.map((a) => ({
+    label: `${a.name}（${a.account_type_name}）余额：${a.current_balance}`,
+    value: a.id,
   }))
 )
 
@@ -576,6 +594,15 @@ const loadLedgers = async () => {
   }
 }
 
+const loadAccounts = async () => {
+  try {
+    const res = await getAccounts({ size: 100 })
+    accounts.value = res.data.items
+  } catch {
+    console.error('Failed to load accounts')
+  }
+}
+
 const toDateStr = (ts: number) => {
   const d = new Date(ts)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -587,6 +614,7 @@ const loadData = async () => {
     const params: Record<string, any> = { page: pagState.page, size: pagState.pageSize }
     if (filterCategoryId.value) params.category_id = filterCategoryId.value
     if (filterLedgerId.value) params.ledger_id = filterLedgerId.value
+    if (filterAccountId.value) params.account_id = filterAccountId.value
     if (filterDateRange.value) {
       params.date_from = toDateStr(filterDateRange.value[0])
       params.date_to = toDateStr(filterDateRange.value[1])
@@ -612,6 +640,7 @@ const loadSummary = async () => {
   const params: Record<string, any> = {}
   if (filterCategoryId.value) params.category_id = filterCategoryId.value
   if (filterLedgerId.value) params.ledger_id = filterLedgerId.value
+  if (filterAccountId.value) params.account_id = filterAccountId.value
   if (filterDateRange.value) {
     params.date_from = toDateStr(filterDateRange.value[0])
     params.date_to = toDateStr(filterDateRange.value[1])
@@ -681,5 +710,6 @@ onMounted(() => {
   loadData()
   loadCategories()
   loadLedgers()
+  loadAccounts()
 })
 </script>

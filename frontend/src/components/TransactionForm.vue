@@ -66,6 +66,15 @@
       <n-form-item label="交易渠道">
         <n-input v-model:value="form.channel" placeholder="如：微信支付、支付宝" />
       </n-form-item>
+      <n-form-item label="关联账户">
+        <n-select
+          v-model:value="form.account"
+          :options="accountSelectOptions"
+          placeholder="选择账户（可选）"
+          clearable
+          filterable
+        />
+      </n-form-item>
       <n-form-item label="交易细节">
         <n-input v-model:value="form.detail" placeholder="可选" />
       </n-form-item>
@@ -98,7 +107,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { createTransaction, updateTransaction } from '@/api/finance'
-import type { Category, Ledger, Transaction } from '@/api/finance/type'
+import type { Category, Ledger, Transaction, Account } from '@/api/finance/type'
 
 const message = useMessage()
 
@@ -106,6 +115,7 @@ const props = defineProps<{
   show: boolean
   categories: Category[]
   ledgers: Ledger[]
+  accounts?: Account[]
   initialCategoryId?: number | null
   initialDate?: number | null
   editTransaction?: Transaction | null
@@ -131,6 +141,7 @@ const form = ref({
   channel: '',
   detail: '',
   remarks: '',
+  account: null as number | null,
 })
 
 const amountType = ref<'expense' | 'income'>('expense')
@@ -158,6 +169,13 @@ const categoryOptions = computed(() =>
     })
 )
 
+const accountSelectOptions = computed(() =>
+  (props.accounts ?? []).map((a) => ({
+    label: `${a.name}（余额：${a.current_balance}）`,
+    value: a.id,
+  }))
+)
+
 watch(() => props.show, (val) => {
   if (val) {
     filterLedgerId.value = null
@@ -176,6 +194,7 @@ watch(() => props.show, (val) => {
         channel: props.editTransaction.channel,
         detail: props.editTransaction.detail,
         remarks: props.editTransaction.remarks,
+        account: props.editTransaction.account ?? null,
       }
     } else {
       isEdit.value = false
@@ -189,6 +208,7 @@ watch(() => props.show, (val) => {
         channel: '',
         detail: '',
         remarks: '',
+        account: null,
       }
     }
   }
@@ -217,6 +237,7 @@ async function handleSubmit() {
       channel: form.value.channel,
       detail: form.value.detail,
       remarks: form.value.remarks,
+      account: form.value.account ?? null,
     }
     if (isEdit.value && form.value.id) {
       await updateTransaction(form.value.id, payload)

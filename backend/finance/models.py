@@ -1,5 +1,5 @@
 from decimal import Decimal
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -60,6 +60,80 @@ class Ledger(models.Model):
 
         self.balance = total.quantize(Decimal("0.01"))
         self.save(update_fields=["balance", "updated_at"])
+
+
+class AccountType(models.Model):
+    name = models.CharField(max_length=30, verbose_name="类型名称")
+    slug = models.CharField(max_length=30, unique=True, verbose_name="标识")
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="排序")
+
+    class Meta:
+        verbose_name = "账户类型"
+        verbose_name_plural = "账户类型"
+        ordering = ["sort_order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Account(models.Model):
+    account_type = models.ForeignKey(
+        AccountType,
+        on_delete=models.PROTECT,
+        related_name="accounts",
+        verbose_name="账户类型",
+    )
+    name = models.CharField(max_length=50, verbose_name="名称")
+    initial_balance = models.DecimalField(
+        max_digits=11,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="初始余额",
+    )
+    current_balance = models.DecimalField(
+        max_digits=11,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="当前余额",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="accounts",
+        verbose_name="所属用户",
+    )
+    remarks = models.CharField(max_length=200, blank=True, verbose_name="备注")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "账户"
+        verbose_name_plural = "账户"
+        ordering = ["account_type", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def recalculate(self):
+        inflow = (
+            Transfer.objects.filter(to_account=self).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        outflow = (
+            Transfer.objects.filter(from_account=self).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        tx_sum = (
+            Transaction.objects.filter(account=self).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        self.current_balance = (
+            self.initial_balance + inflow - outflow + tx_sum
+        ).quantize(Decimal("0.01"))
+        Account.objects.filter(pk=self.pk).update(
+            current_balance=self.current_balance,
+            updated_at=self.updated_at,
+        )
 
 
 class Category(models.Model):
@@ -129,6 +203,65 @@ class Category(models.Model):
         self.save(update_fields=["actual_amount", "updated_at"])
 
 
+class Transfer(models.Model):
+    from_account = models.ForeignKey(
+        Account,
+        on_delete=models.PROTECT,
+        related_name="transfers_out",
+        verbose_name="转出账户",
+    )
+    to_account = models.ForeignKey(
+        Account,
+        on_delete=models.PROTECT,
+        related_name="transfers_in",
+        verbose_name="转入账户",
+    )
+    amount = models.DecimalField(
+        max_digits=11,
+        decimal_places=2,
+        verbose_name="金额",
+    )
+    trade_time = models.DateField(verbose_name="转账日期")
+    note = models.CharField(max_length=200, blank=True, verbose_name="备注")
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="transfers",
+        verbose_name="所属用户",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "转账记录"
+        verbose_name_plural = "转账记录"
+        ordering = ["-trade_time", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(from_account=models.F("to_account")),
+                name="transfer_accounts_differ",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.trade_time} {self.from_account.name} → {self.to_account.name} {self.amount}"
+
+    def save(self, *args, **kwargs):
+        if self.amount <= 0:
+            raise BusinessException(
+                code=CodeEnum.PARAM_ERROR.code,
+                message="转账金额必须大于零",
+                http_status=400,
+            )
+        if self.from_account_id == self.to_account_id:
+            raise BusinessException(
+                code=CodeEnum.TRANSFER_SAME_ACCOUNT.code,
+                message=CodeEnum.TRANSFER_SAME_ACCOUNT.message,
+                http_status=400,
+            )
+        super().save(*args, **kwargs)
+
+
 class Transaction(models.Model):
     """单条交易记录"""
     category = models.ForeignKey(
@@ -136,6 +269,12 @@ class Transaction(models.Model):
         on_delete=models.PROTECT,
         related_name="transactions",
         verbose_name="所属分类",
+    )
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.PROTECT,
+        related_name="transactions",
+        verbose_name="关联账户",
     )
     trade_time = models.DateField(verbose_name="交易日期")
     partner = models.CharField(max_length=100, verbose_name="交易对象")

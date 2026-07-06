@@ -15,8 +15,17 @@
     <n-date-picker
       v-model:value="monthRange"
       type="monthrange"
+      clearable
       style="width: 280px"
     />
+    <n-select
+      v-model:value="filterLedgerId"
+      :options="ledgerFilterOptions"
+      placeholder="全部账本"
+      clearable
+      style="width: 200px"
+    />
+    <n-button type="primary" @click="handleSearch">搜索</n-button>
     </n-space>
 
     <n-grid :cols="3" :x-gap="16" style="margin-bottom: 16px;">
@@ -37,6 +46,32 @@
       <n-gi>
         <n-card title="结余" size="small">
           <n-statistic :value="formatNet" :style="netStyle">
+            <template #suffix> 元</template>
+          </n-statistic>
+        </n-card>
+      </n-gi>
+    </n-grid>
+
+    <n-grid v-if="accounts.length" :cols="1" style="margin-bottom: 16px;">
+      <n-gi>
+        <n-card size="small">
+          <template #header>
+            <span style="font-size: 15px; font-weight: 600;">总资产</span>
+          </template>
+          <n-statistic :value="totalAssets">
+            <template #suffix> 元</template>
+          </n-statistic>
+        </n-card>
+      </n-gi>
+    </n-grid>
+
+    <n-grid v-if="accounts.length" :cols="3" :x-gap="16" style="margin-bottom: 16px;">
+      <n-gi v-for="acc in accounts" :key="acc.id">
+        <n-card :title="acc.name" size="small">
+          <template #header-extra>
+            <n-tag :bordered="false" size="small">{{ acc.account_type_name }}</n-tag>
+          </template>
+          <n-statistic :value="Number(acc.current_balance).toFixed(2)">
             <template #suffix> 元</template>
           </n-statistic>
         </n-card>
@@ -115,6 +150,7 @@
       :show="showFormInline"
       :categories="allCategories"
       :ledgers="allLedgers"
+      :accounts="accounts"
       :initial-date="formInlineDate"
       :edit-transaction="formInlineEdit"
       @close="showFormInline = false; formInlineEdit = null"
@@ -125,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h, watch, onMounted } from 'vue'
+import { ref, computed, h, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard,
@@ -140,12 +176,14 @@ import {
   NButton,
   NSpace,
   NDatePicker,
+  NSelect,
   NPopconfirm,
+  NTag,
   useMessage,
 } from 'naive-ui'
-import { getSummary, getDailySummary, getTransactions, getCategories, getLedgers, deleteTransaction } from '@/api/finance'
+import { getSummary, getDailySummary, getTransactions, getCategories, getLedgers, getAccounts, deleteTransaction } from '@/api/finance'
 import { useAuthStore } from '@/stores/auth'
-import type { Summary, Transaction, DailySummary, Category, Ledger } from '@/api/finance/type'
+import type { Summary, Transaction, DailySummary, Category, Ledger, Account } from '@/api/finance/type'
 import TransactionForm from '@/components/TransactionForm.vue'
 
 const authStore = useAuthStore()
@@ -183,6 +221,18 @@ const formInlineDate = ref<number | null>(null)
 const formInlineEdit = ref<Transaction | null>(null)
 const allCategories = ref<Category[]>([])
 const allLedgers = ref<Ledger[]>([])
+const accounts = ref<Account[]>([])
+const filterLedgerId = ref<number | null>(null)
+
+const ledgerFilterOptions = computed(() =>
+  allLedgers.value
+    .filter((l) => !l.is_complete)
+    .map((l) => ({ label: `${l.name}（${l.ledger_type_display}）`, value: l.id }))
+)
+
+const totalAssets = computed(() =>
+  accounts.value.reduce((sum, acc) => sum + Number(acc.current_balance), 0).toFixed(2)
+)
 
 const onFormSaved = () => {
   showFormInline.value = false
@@ -378,16 +428,17 @@ const toDateStr = (ts: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-const onMonthChange = () => {
-  loadSummary()
-  loadDaily()
-}
-
 const loadSummary = async () => {
+  const params: Record<string, any> = {}
   const range = queryRange.value
-  if (!range) return
+  if (range) {
+    params.date_from = range[0]
+    params.date_to = range[1]
+  }
+  if (filterLedgerId.value) params.ledger_id = filterLedgerId.value
+  if (!Object.keys(params).length) return
   try {
-    const res = await getSummary({ date_from: range[0], date_to: range[1] })
+    const res = await getSummary(params)
     summary.value = res.data
   } catch {
     console.error('Failed to load summary')
@@ -398,22 +449,29 @@ const loadDaily = async () => {
   const start = `${panelYear.value}-${String(panelMonth.value).padStart(2, '0')}-01`
   const end = `${panelYear.value}-${String(panelMonth.value).padStart(2, '0')}-${String(new Date(panelYear.value, panelMonth.value, 0).getDate()).padStart(2, '0')}`
   try {
-    const res = await getDailySummary({ date_from: start, date_to: end })
+    const params: Record<string, any> = { date_from: start, date_to: end }
+    if (filterLedgerId.value) params.ledger_id = filterLedgerId.value
+    const res = await getDailySummary(params)
     dailyList.value = res.data
   } catch {
     console.error('Failed to load daily summary')
   }
 }
 
-watch(monthRange, () => {
-  loadSummary()
-})
-
-onMounted(() => {
+const handleSearch = () => {
+  if (!monthRange.value && !filterLedgerId.value) {
+    message.warning('请至少选择月份范围或账本')
+    return
+  }
   loadSummary()
   loadDaily()
+}
+
+onMounted(() => {
+  handleSearch()
   getCategories({ size: 500 }).then(r => { allCategories.value = r.data.items }).catch(() => {})
   getLedgers({ size: 500 }).then(r => { allLedgers.value = r.data.items }).catch(() => {})
+  getAccounts({ size: 100 }).then(r => { accounts.value = r.data.items }).catch(() => {})
 })
 //   loadDaily()
 // })

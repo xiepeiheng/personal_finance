@@ -24,6 +24,9 @@ class CodeEnum(Enum):
 
     AMOUNT_ZERO = (4001, "金额不能为零")
 
+    ACCOUNT_NOT_FOUND = (3004, "账户不存在")
+    TRANSFER_SAME_ACCOUNT = (3005, "转账的源账户和目标账户不能相同")
+
     @property
     def code(self) -> int:
         return self.value[0]

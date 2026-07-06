@@ -1,6 +1,6 @@
 from django.db.models.signals import post_delete, pre_save, post_save
 from django.dispatch import receiver
-from .models import Transaction, Category, Ledger
+from .models import Transaction, Category, Ledger, Transfer, Account
 
 
 def _recalc_category(category_id):
@@ -29,31 +29,70 @@ def _recalc_ledger(ledger_id):
         pass
 
 
+def _recalc_account(account_id):
+    if account_id is None:
+        return
+    try:
+        Account.objects.get(pk=account_id).recalculate()
+    except Account.DoesNotExist:
+        pass
+
+
 # ─── Transaction signals ───
 
 @receiver(pre_save, sender=Transaction)
-def remember_old_category(sender, instance, **kwargs):
+def remember_old_category_and_account(sender, instance, **kwargs):
     if instance.pk:
         try:
             old = Transaction.objects.get(pk=instance.pk)
             instance._old_category_id = old.category_id
+            instance._old_account_id = old.account_id
         except Transaction.DoesNotExist:
             instance._old_category_id = None
+            instance._old_account_id = None
     else:
         instance._old_category_id = None
+        instance._old_account_id = None
 
 
 @receiver(post_save, sender=Transaction)
 def update_amounts_on_save(sender, instance, **kwargs):
     _recalc_category(instance.category_id)
-    old_id = getattr(instance, "_old_category_id", None)
-    if old_id is not None and old_id != instance.category_id:
-        _recalc_category(old_id)
+    old_cat_id = getattr(instance, "_old_category_id", None)
+    if old_cat_id is not None and old_cat_id != instance.category_id:
+        _recalc_category(old_cat_id)
+
+    _recalc_account(instance.account_id)
+    old_acc_id = getattr(instance, "_old_account_id", None)
+    if old_acc_id is not None and old_acc_id != instance.account_id:
+        _recalc_account(old_acc_id)
 
 
 @receiver(post_delete, sender=Transaction)
 def update_amounts_on_delete(sender, instance, **kwargs):
     _recalc_category(instance.category_id)
+    _recalc_account(instance.account_id)
+
+
+# ─── Transfer signals ───
+
+@receiver(post_save, sender=Transfer)
+def update_accounts_on_transfer_save(sender, instance, **kwargs):
+    _recalc_account(instance.from_account_id)
+    _recalc_account(instance.to_account_id)
+
+
+@receiver(post_delete, sender=Transfer)
+def update_accounts_on_transfer_delete(sender, instance, **kwargs):
+    _recalc_account(instance.from_account_id)
+    _recalc_account(instance.to_account_id)
+
+
+# ─── Account signals ───
+
+@receiver(post_save, sender=Account)
+def update_account_on_save(sender, instance, **kwargs):
+    _recalc_account(instance.id)
 
 
 # ─── Category signals ───

@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 
 ALL_MODELS = {
-    "finance": ["ledger", "category", "transaction"],
+    "finance": ["ledger", "category", "transaction", "account", "accounttype", "transfer"],
     "auth": ["group", "permission", "user"],
 }
 
@@ -12,6 +12,9 @@ ALL_PERMISSIONS = {
     "ledger": ["view", "add", "change", "delete"],
     "category": ["view", "add", "change", "delete"],
     "transaction": ["view", "add", "change", "delete"],
+    "account": ["view", "add", "change", "delete"],
+    "accounttype": ["view", "add", "change", "delete"],
+    "transfer": ["view", "add", "change", "delete"],
 }
 
 APP_LABEL_MAP = {
@@ -21,6 +24,9 @@ APP_LABEL_MAP = {
     "ledger": "finance",
     "category": "finance",
     "transaction": "finance",
+    "account": "finance",
+    "accounttype": "finance",
+    "transfer": "finance",
 }
 
 

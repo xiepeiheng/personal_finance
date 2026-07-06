@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Ledger, Transaction
+from .models import Account, AccountType, Category, Ledger, Transaction, Transfer
 
 
 class LedgerSerializer(serializers.ModelSerializer):
@@ -24,6 +24,39 @@ class LedgerSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["balance", "created_at", "updated_at"]
+
+
+class AccountTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountType
+        fields = ["id", "name", "slug", "sort_order"]
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    account_type_name = serializers.CharField(
+        source="account_type.name", read_only=True
+    )
+    account_type_slug = serializers.CharField(
+        source="account_type.slug", read_only=True
+    )
+    created_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
+    updated_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
+
+    class Meta:
+        model = Account
+        fields = [
+            "id",
+            "account_type",
+            "account_type_name",
+            "account_type_slug",
+            "name",
+            "initial_balance",
+            "current_balance",
+            "remarks",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["current_balance", "created_at", "updated_at"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -76,7 +109,53 @@ class CategorySerializer(serializers.ModelSerializer):
         return data
 
 
+class TransferSerializer(serializers.ModelSerializer):
+    from_account_name = serializers.CharField(
+        source="from_account.name", read_only=True
+    )
+    to_account_name = serializers.CharField(
+        source="to_account.name", read_only=True
+    )
+    created_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
+    updated_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
+
+    class Meta:
+        model = Transfer
+        fields = [
+            "id",
+            "from_account",
+            "from_account_name",
+            "to_account",
+            "to_account_name",
+            "amount",
+            "trade_time",
+            "note",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("转账金额必须大于零")
+        return value
+
+    def validate(self, data):
+        from_account = data.get("from_account") or (
+            self.instance.from_account if self.instance else None
+        )
+        to_account = data.get("to_account") or (
+            self.instance.to_account if self.instance else None
+        )
+        if from_account and to_account and from_account == to_account:
+            raise serializers.ValidationError("转账的源账户和目标账户不能相同")
+        return data
+
+
 class TransactionSerializer(serializers.ModelSerializer):
+    account_name = serializers.CharField(
+        source="account.name", read_only=True, allow_null=True
+    )
     created_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
     updated_at = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", read_only=True)
 
@@ -85,6 +164,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "category",
+            "account",
+            "account_name",
             "trade_time",
             "partner",
             "amount",
@@ -105,6 +186,11 @@ class TransactionSerializer(serializers.ModelSerializer):
 
 
 class TransactionCreateSerializer(TransactionSerializer):
+    account = serializers.PrimaryKeyRelatedField(
+        queryset=Account.objects.all(),
+        required=True,
+    )
+
     def validate_amount(self, value):
         if value == 0:
             raise serializers.ValidationError("金额不能为零")
