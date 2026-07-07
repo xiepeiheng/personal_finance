@@ -32,7 +32,9 @@ fi
 set -a; source "${SECRETS_FILE}"; set +a
 
 cd "${BACKEND_DIR}"
-envsubst < .env.production.template > .env.production
+envsubst < .env.production.template > /tmp/env_production
+sudo mv /tmp/env_production .env.production
+sudo chown www:www .env.production
 echo "  → backend/.env.production generated"
 
 uv sync --extra dev
