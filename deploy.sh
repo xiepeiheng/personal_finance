@@ -56,9 +56,8 @@ echo "  → frontend/.env.production generated"
 pnpm install
 echo "  → Node dependencies up to date"
 
-pnpm build
+pnpm build-prod
 echo "  → Frontend built to dist/"
 
 echo ""
 echo "=== Deploy complete ==="
-echo "Restart the backend service (Gunicorn) in 宝塔面板 to apply changes."
