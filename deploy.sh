@@ -35,7 +35,7 @@ cd "${BACKEND_DIR}"
 envsubst < .env.production.template > .env.production
 echo "  → backend/.env.production generated"
 
-uv sync
+uv sync --extra dev
 echo "  → Python dependencies up to date"
 
 uv run python manage.py migrate
