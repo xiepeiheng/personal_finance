@@ -17,6 +17,9 @@ echo "=== Pulling latest code ==="
 cd "${PROJECT_DIR}"
 git pull
 
+# Deploy as xph, gunicorn runs as www — need to swap ownership
+sudo chown -R xph:xph "${BACKEND_DIR}"
+
 # -------------------------------------------------------------------
 # Backend
 # -------------------------------------------------------------------
@@ -67,6 +70,10 @@ echo "  → Copying to ${WEBROOT} ..."
 sudo cp -r dist/* "${WEBROOT}/"
 sudo chown -R www:www "${WEBROOT}/"
 echo "  → Web root updated"
+
+# Restore logs ownership for gunicorn (runs as www)
+sudo mkdir -p "${BACKEND_DIR}/logs"
+sudo chown -R www:www "${BACKEND_DIR}/logs"
 
 echo ""
 echo "=== Deploy complete ==="
