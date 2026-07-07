@@ -59,5 +59,12 @@ echo "  → Node dependencies up to date"
 pnpm build-prod
 echo "  → Frontend built to dist/"
 
+# Copy to web root (Nginx serves from here)
+WEBROOT="/www/wwwroot/xph.silyahuukou.cn/personal_finance"
+echo "  → Copying to ${WEBROOT} ..."
+sudo cp -r dist/* "${WEBROOT}/"
+sudo chown -R www:www "${WEBROOT}/"
+echo "  → Web root updated"
+
 echo ""
 echo "=== Deploy complete ==="
