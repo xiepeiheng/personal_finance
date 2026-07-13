@@ -129,7 +129,7 @@ const columns = [
     key: 'current_balance',
     render: (row: Account) => {
       const bal = Number(row.current_balance)
-      const color = bal >= 0 ? '#18a058' : '#d03050'
+      const color = bal >= 0 ? '#d03050' : '#18a058'
       return h('span', { style: { color, fontWeight: 'bold' } }, `${bal >= 0 ? '+' : ''}${row.current_balance}`)
     },
   },

@@ -158,15 +158,15 @@ const clearFilters = () => {
 
 const columns = [
   { title: '日期', key: 'trade_time', width: 110 },
-  {
+    {
     title: '转出',
     key: 'from_account_name',
-    render: (row: Transfer) => h('span', { style: { color: '#d03050' } }, row.from_account_name),
+    render: (row: Transfer) => h('span', { style: { color: '#18a058' } }, row.from_account_name),
   },
   {
     title: '转入',
     key: 'to_account_name',
-    render: (row: Transfer) => h('span', { style: { color: '#18a058' } }, row.to_account_name),
+    render: (row: Transfer) => h('span', { style: { color: '#d03050' } }, row.to_account_name),
   },
   {
     title: '金额',

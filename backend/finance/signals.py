@@ -76,10 +76,32 @@ def update_amounts_on_delete(sender, instance, **kwargs):
 
 # ─── Transfer signals ───
 
+@receiver(pre_save, sender=Transfer)
+def remember_old_accounts(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old = Transfer.objects.get(pk=instance.pk)
+            instance._old_from_account_id = old.from_account_id
+            instance._old_to_account_id = old.to_account_id
+        except Transfer.DoesNotExist:
+            instance._old_from_account_id = None
+            instance._old_to_account_id = None
+    else:
+        instance._old_from_account_id = None
+        instance._old_to_account_id = None
+
+
 @receiver(post_save, sender=Transfer)
 def update_accounts_on_transfer_save(sender, instance, **kwargs):
     _recalc_account(instance.from_account_id)
+    old_from_id = getattr(instance, "_old_from_account_id", None)
+    if old_from_id is not None and old_from_id != instance.from_account_id:
+        _recalc_account(old_from_id)
+
     _recalc_account(instance.to_account_id)
+    old_to_id = getattr(instance, "_old_to_account_id", None)
+    if old_to_id is not None and old_to_id != instance.to_account_id:
+        _recalc_account(old_to_id)
 
 
 @receiver(post_delete, sender=Transfer)

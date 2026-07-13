@@ -66,12 +66,11 @@
       <n-form-item label="交易渠道">
         <n-input v-model:value="form.channel" placeholder="如：微信支付、支付宝" />
       </n-form-item>
-      <n-form-item label="关联账户">
+      <n-form-item label="关联账户" required>
         <n-select
           v-model:value="form.account"
           :options="accountSelectOptions"
-          placeholder="选择账户（可选）"
-          clearable
+          placeholder="请选择账户"
           filterable
         />
       </n-form-item>
@@ -223,6 +222,7 @@ async function handleSubmit() {
   if (!form.value.trade_time) { message.warning('请选择交易日期'); return }
   if (!form.value.partner) { message.warning('请输入交易对象'); return }
   if (!form.value.amount || form.value.amount === 0) { message.warning('金额不能为零'); return }
+  if (!form.value.account) { message.warning('请选择关联账户'); return }
 
   submitting.value = true
   try {
