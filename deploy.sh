@@ -47,6 +47,10 @@ sudo mv /tmp/env_production .env.production
 sudo chown www:www .env.production
 echo "  → backend/.env.production generated"
 
+# Keep the venv on the shared, world-readable interpreter (/opt/uv-python).
+# An interpreter under /root or /home/<user> is not executable by www.
+export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-/opt/uv-python}"
+
 uv sync --frozen
 echo "  → Python dependencies up to date"
 
