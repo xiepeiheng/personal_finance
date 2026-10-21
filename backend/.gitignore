@@ -21,6 +21,10 @@ __pycache__/
 local_settings.py
 db.sqlite3
 
+# Runtime artifacts (gunicorn pid, rotated application logs)
+logs/
+*.pid
+
 # Static files
 /static/
 /media/
